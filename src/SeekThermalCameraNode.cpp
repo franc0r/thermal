@@ -24,7 +24,7 @@ SeekThermalCameraNode::SeekThermalCameraNode()
 {
   _cam.open();
 
-  create_wall_timer(
+  _timer_process_camera_data = create_wall_timer(
     0.1s,
     std::bind(&SeekThermalCameraNode::processCameraData, this)
   );
@@ -38,6 +38,9 @@ void SeekThermalCameraNode::processCameraData()
     RCLCPP_ERROR(get_logger(), "Can't read image from thermal cam \"seek\".");
     return;
   }
+
+  cv::normalize(frame, frame, 0, 65535, cv::NORM_MINMAX);
+  frame.convertTo(frame, CV_8UC1);
 
   cv::Mat color_frame;
   const int rotate = 0;
@@ -58,7 +61,5 @@ void SeekThermalCameraNode::processCameraData()
   _color_image = cv_image.toImageMsg();
   _pub_colored_image->publish(*_color_image, sensor_msgs::msg::CameraInfo()); // \todo fix camera info
 }
-
-
 
 } // end namespace francor
