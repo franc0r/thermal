@@ -20,6 +20,7 @@ public:
 
 private:
   void processCameraData();
+  void normalize(cv::Mat &inframe);
 
   LibSeek::SeekThermal _cam;
 

@@ -19,8 +19,8 @@ SeekThermalCameraNode::SeekThermalCameraNode()
   : rclcpp::Node("seek_node"),
     _cam(),
     _pub_colored_image(std::make_shared<image_transport::CameraPublisher>(
-      image_transport::create_camera_publisher(this, "image_raw", rclcpp::QoS{2}.get_rmw_qos_profile())))
-    // _color_image(std::make_shared<sensor_msgs::msg::Image>())
+      image_transport::create_camera_publisher(this, "image_raw", rclcpp::QoS{2}.get_rmw_qos_profile()))),
+    _color_image(std::make_shared<sensor_msgs::msg::Image>())
 {
   RCLCPP_INFO(get_logger(), "Initialize Seek thermal camera.");
 
@@ -45,11 +45,12 @@ void SeekThermalCameraNode::processCameraData()
     return;
   }
 
-  cv::normalize(frame, frame, 0, 65535, cv::NORM_MINMAX);
-  frame.convertTo(frame, CV_8UC1);
+  // cv::normalize(frame, frame, 0, 65535, cv::NORM_MINMAX);
+  normalize(frame);
+  frame.convertTo(frame, CV_8UC1, 1.0/256.0);
 
   cv::Mat color_frame;
-  const int rotate = 0;
+  const int rotate = 90;
 
   // Rotate image
   if (rotate == 90) {
@@ -66,6 +67,30 @@ void SeekThermalCameraNode::processCameraData()
   cv_bridge::CvImage cv_image{_color_image->header, sensor_msgs::image_encodings::BGR8, color_frame};
   _color_image = cv_image.toImageMsg();
   _pub_colored_image->publish(*_color_image, sensor_msgs::msg::CameraInfo()); // \todo fix camera info
+}
+
+void SeekThermalCameraNode::normalize(cv::Mat &inframe)
+{
+  static double min =-1, max = -1;
+  static float multiplier = -1;
+
+  if (min == -1) {
+    cv::minMaxLoc(inframe, &min, &max);
+    multiplier = 65535 / (max - min);
+  }
+  for (int y = 0; y < inframe.rows; y++) {
+      for (int x = 0; x < inframe.cols; x++) {
+          uint16_t val = inframe.at<uint16_t>(y, x);
+          if (val > max) {
+              val = 65535;
+          } else if (val < min) {
+              val = 0;
+          } else {
+              val = (val - min) * multiplier;
+          }
+          inframe.at<uint16_t>(y, x) = val;
+      }
+  }
 }
 
 } // end namespace francor
