@@ -22,6 +22,8 @@ SeekThermalCameraNode::SeekThermalCameraNode()
       image_transport::create_camera_publisher(this, "image_raw", rclcpp::QoS{2}.get_rmw_qos_profile())))
     // _color_image(std::make_shared<sensor_msgs::msg::Image>())
 {
+  RCLCPP_INFO(get_logger(), "Initialize Seek thermal camera.");
+
   if (!_cam.open()) {
     RCLCPP_ERROR(get_logger(), "Can't open Seek thermal camera.");
     return;
@@ -35,6 +37,7 @@ SeekThermalCameraNode::SeekThermalCameraNode()
 
 void SeekThermalCameraNode::processCameraData()
 {
+  RCLCPP_INFO(get_logger(), "Process thermal image data.");
   cv::Mat frame;
 
   if (!_cam.read(frame)) {
