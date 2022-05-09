@@ -1,11 +1,15 @@
 #include "SeekThermalCameraNode.h"
 #include <functional>
+#include <memory>
+#include <opencv2/core/version.hpp>
 #include <rclcpp/duration.hpp>
 #include <rclcpp/logging.hpp>
 #include <rclcpp/node.hpp>
 #include <chrono>
 
 #include <cv_bridge/cv_bridge.h>
+#include <sensor_msgs/image_encodings.hpp>
+#include <sensor_msgs/msg/detail/image__struct.hpp>
 
 namespace francor {
 
@@ -13,7 +17,10 @@ using namespace std::chrono_literals;
 
 SeekThermalCameraNode::SeekThermalCameraNode()
   : rclcpp::Node("seek_node"),
-    _cam()
+    _cam(),
+    _pub_colored_image(std::make_shared<image_transport::CameraPublisher>(
+      image_transport::create_camera_publisher(this, "image_raw", rclcpp::QoS{2}.get_rmw_qos_profile())))
+    // _color_image(std::make_shared<sensor_msgs::msg::Image>())
 {
   _cam.open();
 
@@ -47,8 +54,9 @@ void SeekThermalCameraNode::processCameraData()
   }
 
   cv::applyColorMap(frame, color_frame, cv::COLORMAP_SPRING);
-
-  
+  cv_bridge::CvImage cv_image{_color_image->header, sensor_msgs::image_encodings::BGR8, color_frame};
+  _color_image = cv_image.toImageMsg();
+  _pub_colored_image->publish(*_color_image, sensor_msgs::msg::CameraInfo()); // \todo fix camera info
 }
 
 
