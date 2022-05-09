@@ -22,7 +22,10 @@ SeekThermalCameraNode::SeekThermalCameraNode()
       image_transport::create_camera_publisher(this, "image_raw", rclcpp::QoS{2}.get_rmw_qos_profile())))
     // _color_image(std::make_shared<sensor_msgs::msg::Image>())
 {
-  _cam.open();
+  if (!_cam.open()) {
+    RCLCPP_ERROR(get_logger(), "Can't open Seek thermal camera.");
+    return;
+  }
 
   _timer_process_camera_data = create_wall_timer(
     0.1s,
